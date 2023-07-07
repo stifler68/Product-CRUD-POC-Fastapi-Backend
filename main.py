@@ -1,6 +1,8 @@
 from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Annotated, List
 from fastapi.middleware.cors import CORSMiddleware
 
 import crud, models, schemas
@@ -10,6 +12,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # Configure CORS
 origins = [
     "http://localhost",
@@ -37,7 +40,12 @@ def get_db():
 
 
 @app.get("/users")
-def get_all_user(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_all_user(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    # current_user: str = Depends(crud.verify_token),
+):
     users = crud.get_users(db, skip=skip, limit=limit)
     to_return = {
         "message": "User retrieved successfully",
@@ -118,7 +126,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 # ----------------- Login ----------------------
 
 
-@app.post("/users/login")
+@app.post("/token")
 def login(user: schemas.Login, db: Session = Depends(get_db)):
     db_user = crud.user_login(db=db, user=user)
     message = {"Message": " Login Successful"}
@@ -132,9 +140,54 @@ def login(user: schemas.Login, db: Session = Depends(get_db)):
     }
 
 
-@app.post("/token")
-def read_user_me(current_user: str = Depends(crud.verify_token)):
+@app.post("/user-me")
+def read_user_me(
+    current_user: schemas.User = Depends(
+        crud.verify_token,
+    ),
+    db: Session = Depends(get_db),
+):
     db = SessionLocal()
     db_user = db.query(models.User).filter(models.User.email == current_user).first()
     db.close()
     return db_user
+
+
+# ----------------- PRODUCT --------------------------
+
+
+@app.get("/products", response_model=list[schemas.Product])
+def get_all_product(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    product = crud.get_all_products(db, skip=skip, limit=limit)
+    return product
+
+
+@app.post("/product", response_model=schemas.Product)
+def add_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
+    return crud.add_product(db=db, product=product)
+
+
+@app.get("/product/{product_id}", response_model=schemas.Product)
+def get_product_by_ID(product_id: int, db: Session = Depends(get_db)):
+    db_product = crud.get_product_by_Id(db=db, product_id=product_id)
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return db_product
+
+
+@app.put("/product/{product_id}")
+def update_product(
+    product: schemas.ProductUpdate, product_id: int, db: Session = Depends(get_db)
+):
+    db_product = crud.update_product(db=db, product_id=product_id, product=product)
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="product not found")
+    return {"message": "Product Updated Successful"}
+
+
+@app.delete("/product/{product_id}", response_model=schemas.Product)
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = crud.delete_product(db=db, product_id=product_id)
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_product

@@ -69,3 +69,51 @@ class verify_token(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# ------------- PRODUCT ---------------------------------------------------------------
+
+
+class Product(BaseModel):
+    product_id: int
+    name: str
+    for_which_gender: str
+    Category: int
+    sizes: str
+    quantity: int
+    description: str
+    made_in_india: int
+    state: str
+    added_by = int
+
+    class Config:
+        orm_mode = True
+
+
+class ProductCreate(BaseModel):
+    name: str
+    for_which_gender: str
+    Category: int
+    sizes: str
+    quantity: int
+    description: str
+    made_in_india: int
+    state: str
+    added_by: int
+
+    class Config:
+        orm_mode = True
+
+
+class ProductUpdate(BaseModel):
+    name: Optional[str]
+    for_which_gender: Optional[str]
+    Category: Optional[int]
+    sizes: Optional[str]
+    quantity: Optional[int]
+    description: Optional[str]
+    made_in_india: Optional[int]
+    state: Optional[str]
+
+    class Config:
+        orm_mode = True

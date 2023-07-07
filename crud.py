@@ -1,5 +1,5 @@
 import json
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
@@ -18,6 +18,18 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -143,16 +155,17 @@ def create_access_token(data: dict):
 #     raise HTTPException(status_code=401, detail="Invalid token")
 
 
-def verify_token(token: str):
+def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload["sub"]
         # Fetch the user from the database based on the username or perform other operations as needed
-        # user = db.query(models.User).filter(models.User.email == email).first()
-        print(email)
         if email is None:
             return {"Error": " User not Found"}
-        return email
+        user = db.query(models.User).filter(models.User.email == email).first()
+        if user:
+            return user
+        return {"Error": " User not Found"}
     except JWTError:
         return {"Error": " Username not Found"}
 
@@ -165,3 +178,50 @@ def get_password_hash(password):
 # Verify a password
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+
+# ----------------------- Products ---------------------------------------
+
+
+def get_all_products(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Product).offset(skip).limit(limit).all()
+
+
+def get_product_by_Id(db: Session, product_id: int):
+    return (
+        db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    )
+
+
+def add_product(db: Session, product: schemas.ProductCreate):
+    db_product = models.Product(**product.dict())
+    print(db_product)
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+
+def delete_product(db: Session, product_id: int):
+    product_found = (
+        db.query(models.Product).filter(models.Product.product_id == product_id).first()
+    )
+    if not product_found:
+        return product_found
+    db.delete(product_found)
+    db.commit()
+    return product_found
+
+
+def update_product(db: Session, product_id: int, product: schemas.ProductUpdate):
+    filtered_payload = {
+        key: value for key, value in dict(product).items() if value != None
+    }
+    print(filtered_payload)
+    val = (
+        db.query(models.Product)
+        .filter(models.Product.product_id == product_id)
+        .update(filtered_payload)
+    )
+    db.commit()
+    return val

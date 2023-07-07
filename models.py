@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Column, Date, Integer, String, SMALLINT
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String, SMALLINT
+from sqlalchemy.orm import relationship
+
 from database import Base
 
 
@@ -17,3 +19,22 @@ class User(Base):
     state = Column(String(255), nullable=False)
     password = Column(String(255), nullable=False)
     nationality = Column(Integer, nullable=False)
+
+    products = relationship("Product", back_populates="owner")
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    product_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    for_which_gender = Column(String(10), nullable=False)
+    Category = Column(Integer, nullable=False)
+    sizes = Column(String(50), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    description = Column(String(255), nullable=False)
+    made_in_india = Column(Integer, nullable=False)
+    state = Column(String(50))
+    added_by = Column(Integer, ForeignKey("users.id"))
+
+    owner = relationship("User", back_populates="products")

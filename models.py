@@ -33,7 +33,7 @@ class Product(Base):
     sizes = Column(String(50), nullable=False)
     quantity = Column(Integer, nullable=False)
     description = Column(String(255), nullable=False)
-    made_in_india = Column(Integer, nullable=False)
+    made_in_india = Column(Integer)
     state = Column(String(50))
     added_by = Column(Integer, ForeignKey("users.id"))
 

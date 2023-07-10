@@ -8,6 +8,22 @@ from fastapi.middleware.cors import CORSMiddleware
 import crud, models, schemas
 from database import SessionLocal, engine
 
+from const import (
+    INVALID_USERNAME_OR_PASSWORD,
+    LOGIN_SUCCESSFUL,
+    PLEASE_CHECK_MADE_IN_INDIA_AND_STATE_FIELD,
+    PLEASE_PROVIDE_STATE_FIELD,
+    PRODUCT_ADDED_SUCCESSFULLY,
+    PRODUCT_NOT_FOUND,
+    UPDATED_SUCCESSFUL,
+    USER_ADDED_SUCCESSFULLY,
+    USER_DELETED_SUCCESSFULLY,
+    USER_RETRIEVED_SUCCESSFULLY,
+    USER_NOT_FOUND,
+    PHONE_NUMBER_IS_NOT_VALID,
+    EMAIL_ALREADY_EXISTS,
+)
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -48,7 +64,7 @@ def get_all_user(
 ):
     users = crud.get_users(db, skip=skip, limit=limit)
     to_return = {
-        "message": "User retrieved successfully",
+        "message": USER_RETRIEVED_SUCCESSFULLY,
         "data": users,
         "code": 200,
         "success": "true",
@@ -57,12 +73,20 @@ def get_all_user(
 
 
 @app.get("/users/{user_id}")
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    # current_user: str = Depends(crud.verify_token),
+):
     db_user = crud.get_user_by_id(db, user_id=user_id)
     if db_user is None:
-        return {"message": "User Not Found"}
+        return {
+            "message": USER_NOT_FOUND,
+            "code": 404,
+            "success": "true",
+        }
     to_return = {
-        "message": "User retrieved successfully",
+        "message": USER_RETRIEVED_SUCCESSFULLY,
         "data": db_user,
         "code": 200,
         "success": "true",
@@ -71,11 +95,15 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/users")
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    # current_user: str = Depends(crud.verify_token),
+):
     db_user = crud.create_user(db=db, user=user)
     if db_user == "phone_not_valid":
         to_return = {
-            "message": "Phone Number is not a valid",
+            "message": PHONE_NUMBER_IS_NOT_VALID,
             "code": 400,
             "success": "false",
         }
@@ -83,14 +111,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     elif db_user == "email_already_exits":
         to_return = {
-            "message": "Email Already exists",
+            "message": EMAIL_ALREADY_EXISTS,
             "code": 400,
             "success": "false",
         }
         return to_return
     else:
         to_return = {
-            "message": "User Added Successfully",
+            "message": USER_ADDED_SUCCESSFULLY,
             "data": db_user,
             "code": 200,
             "success": "true",
@@ -99,95 +127,147 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/users/{user_id}")
-def update_user(user: schemas.UserUpdate, user_id: int, db: Session = Depends(get_db)):
+def update_user(
+    user: schemas.UserUpdate,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
     db_user = crud.update_user(db, user_id=user_id, user=user)
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     if db_user == "phone_not_valid":
         to_return = {
-            "message": "Phone Number is not a valid",
+            "message": PHONE_NUMBER_IS_NOT_VALID,
             "code": 400,
             "success": "false",
         }
         return to_return
     else:
-        return {"message": "Updated Successful"}
+        return {"message": UPDATED_SUCCESSFUL}
 
 
 @app.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
     db_user = crud.delete_user(db, user_id=user_id)
-    message = {"Message": " User Deleted Successfully"}
+    message = {"Message": USER_DELETED_SUCCESSFULLY}
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return message
 
 
-# ----------------- Login ----------------------
+# ----------------- Login ------------------------------
 
 
-@app.post("/token")
+@app.post("/login")
 def login(user: schemas.Login, db: Session = Depends(get_db)):
     db_user = crud.user_login(db=db, user=user)
-    message = {"Message": " Login Successful"}
+    message = {"Message": LOGIN_SUCCESSFUL}
     if db_user is None:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise HTTPException(status_code=401, detail=INVALID_USERNAME_OR_PASSWORD)
     access_token = crud.create_access_token(data={"sub": db_user.email})
     return {
-        "Message": " Login Successful",
+        "Message": LOGIN_SUCCESSFUL,
         "access_token": access_token,
         "token_type": "bearer",
     }
 
 
-@app.post("/user-me")
-def read_user_me(
-    current_user: schemas.User = Depends(
-        crud.verify_token,
-    ),
-    db: Session = Depends(get_db),
-):
-    db = SessionLocal()
-    db_user = db.query(models.User).filter(models.User.email == current_user).first()
-    db.close()
-    return db_user
+# @app.post("/user-me")
+# def read_user_me(
+#     current_user: schemas.User = Depends(
+#         crud.verify_token,
+#     ),
+#     db: Session = Depends(get_db),
+# ):
+#     db = SessionLocal()
+#     db_user = db.query(models.User).filter(models.User.email == current_user).first()
+#     db.close()
+#     return db_user
 
 
 # ----------------- PRODUCT --------------------------
 
 
 @app.get("/products", response_model=list[schemas.Product])
-def get_all_product(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_all_product(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
     product = crud.get_all_products(db, skip=skip, limit=limit)
     return product
 
 
-@app.post("/product", response_model=schemas.Product)
-def add_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
-    return crud.add_product(db=db, product=product)
+# Add Product
+@app.post("/product")
+def add_product(
+    product: schemas.ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
+    product_values = crud.add_product(db=db, product=product)
+
+    if product_values == "state_error":
+        to_return = {
+            "message": PLEASE_PROVIDE_STATE_FIELD,
+            "code": 400,
+            "success": "False",
+        }
+        return to_return
+    elif product_values == "country_error":
+        to_return = {
+            "message": PLEASE_CHECK_MADE_IN_INDIA_AND_STATE_FIELD,
+            "code": 400,
+            "success": "False",
+        }
+        return to_return
+
+    to_return = {
+        "message": PRODUCT_ADDED_SUCCESSFULLY,
+        "code": 201,
+        "success": "True",
+    }
+    return to_return
 
 
 @app.get("/product/{product_id}", response_model=schemas.Product)
-def get_product_by_ID(product_id: int, db: Session = Depends(get_db)):
+def get_product_by_ID(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
     db_product = crud.get_product_by_Id(db=db, product_id=product_id)
     if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=PRODUCT_NOT_FOUND)
     return db_product
 
 
 @app.put("/product/{product_id}")
 def update_product(
-    product: schemas.ProductUpdate, product_id: int, db: Session = Depends(get_db)
+    product: schemas.ProductUpdate,
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
 ):
     db_product = crud.update_product(db=db, product_id=product_id, product=product)
     if db_product is None:
-        raise HTTPException(status_code=404, detail="product not found")
+        raise HTTPException(status_code=404, detail=PRODUCT_NOT_FOUND)
     return {"message": "Product Updated Successful"}
 
 
 @app.delete("/product/{product_id}", response_model=schemas.Product)
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(crud.verify_token),
+):
     db_product = crud.delete_product(db=db, product_id=product_id)
     if db_product is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return db_product

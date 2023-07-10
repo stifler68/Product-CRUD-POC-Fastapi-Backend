@@ -195,11 +195,17 @@ def get_product_by_Id(db: Session, product_id: int):
 
 def add_product(db: Session, product: schemas.ProductCreate):
     db_product = models.Product(**product.dict())
-    print(db_product)
+    if db_product.made_in_india == 1 and len(db_product.state) <= 0:
+        return "state_error"
+    if db_product.made_in_india == 0 and len(db_product.state) > 0:
+        return "country_error"
+
     db.add(db_product)
+    db.flush()
     db.commit()
     db.refresh(db_product)
-    return db_product
+    print(db_product)
+    return db_product.__dict__
 
 
 def delete_product(db: Session, product_id: int):

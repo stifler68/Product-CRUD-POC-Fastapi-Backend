@@ -1,0 +1,15 @@
+USER_RETRIEVED_SUCCESSFULLY: str = "User Retrieved Successfully"
+USER_NOT_FOUND: str = "User Not Found"
+PHONE_NUMBER_IS_NOT_VALID: str = "phone number is not valid"
+EMAIL_ALREADY_EXISTS: str = "Email Already exists"
+USER_ADDED_SUCCESSFULLY: str = "User Added Successfully"
+UPDATED_SUCCESSFUL: str = "Updated Successful"
+USER_DELETED_SUCCESSFULLY: str = "User Deleted Successfully"
+LOGIN_SUCCESSFUL: str = "Login Successful"
+INVALID_USERNAME_OR_PASSWORD: str = "Invalid username or password"
+PLEASE_PROVIDE_STATE_FIELD: str = "Please provide state field"
+PLEASE_CHECK_MADE_IN_INDIA_AND_STATE_FIELD: str = (
+    "Please check made_in_india and State field"
+)
+PRODUCT_ADDED_SUCCESSFULLY: str = "Product Added Successfully"
+PRODUCT_NOT_FOUND: str = "Product not found"

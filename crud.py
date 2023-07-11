@@ -8,7 +8,11 @@ import models, schemas
 from passlib.context import CryptContext
 
 # Authentication
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import (
+    OAuth2PasswordBearer,
+    OAuth2PasswordRequestForm,
+    OAuth2AuthorizationCodeBearer,
+)
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from jwt import InvalidTokenError, ExpiredSignatureError
@@ -17,10 +21,13 @@ from jwt import InvalidTokenError, ExpiredSignatureError
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="token", tokenUrl="token"
+)
 
 
 def get_db():
@@ -38,7 +45,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     user = db.query(models.User).offset(skip).limit(limit).all()
     to_return = []
     for i in user:
-        to_return.append(json.loads(schemas.User.parse_obj(i.__dict__).json()))
+        to_return.append(json.loads(schemas.Show_User.parse_obj(i.__dict__).json()))
 
     return to_return
 
@@ -49,8 +56,7 @@ def create_user(db: Session, user: schemas.UserCreate):
 
     user_data = user.dict()
     db_user = models.User(**user_data)
-    # print(type(db_user))
-    # print(len(db_user.alternate_number), len(db_user.phone_number))
+
     email = user.email
     check_email = db.query(models.User).filter(models.User.email == email).first()
     if len(db_user.phone_number) != 10 or (
@@ -70,9 +76,9 @@ def create_user(db: Session, user: schemas.UserCreate):
 def get_user_by_id(db: Session, user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     to_return = []
-    print((user).__dict__)
+
     to_return = []
-    to_return.append(json.loads(schemas.User.parse_obj(user.__dict__).json()))
+    to_return.append(json.loads(schemas.Show_User.parse_obj(user.__dict__).json()))
 
     return to_return
 
@@ -80,7 +86,7 @@ def get_user_by_id(db: Session, user_id: int):
 def update_user(db: Session, user_id: int, user: schemas.UserUpdate):
     if user.password:
         user.password = pwd_context.hash(user.password)
-    print(user)
+
     filtered_payload = {
         key: value for key, value in dict(user).items() if value != None
     }
@@ -110,7 +116,7 @@ def user_login(db: Session, user: schemas.Login):
     user_found = db.query(models.User).filter(models.User.email == user.email).first()
     if not user_found:
         return None
-    # print(user.password, "  --   ", user_found.password)
+
     if not pwd_context.verify(user.password, user_found.password):
         return None
     return user_found
@@ -128,31 +134,6 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     access_token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return access_token
-
-
-# Verify the JWT access token
-# def verify_token(token: schemas.verify_token, db: Session):
-#     try:
-#         print(">>>>")
-#         payload = jwt.decode(token.token_number, SECRET_KEY, algorithms=[ALGORITHM])
-#         email = payload["sub"]
-#         print(email)
-#         if email is None:
-#             raise HTTPException(status_code=401, detail="Username not found")
-
-#         # Fetch the user from the database based on the username or perform other operations as needed
-#         user = db.query(models.User).filter(models.User.email == email).first()
-
-#         if not user:
-#             raise HTTPException(status_code=404, detail="User not found")
-
-#         to_return = []
-#         to_return.append(json.loads(schemas.User.parse_obj(user.__dict__).json()))
-
-#         return to_return
-
-# except JWTError:
-#     raise HTTPException(status_code=401, detail="Invalid token")
 
 
 def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -193,8 +174,11 @@ def get_product_by_Id(db: Session, product_id: int):
     )
 
 
-def add_product(db: Session, product: schemas.ProductCreate):
-    db_product = models.Product(**product.dict())
+def add_product(db: Session, product: schemas.ProductCreate, added_by: int):
+    api_product = {**product.dict()}
+    api_product["added_by"] = added_by
+
+    db_product = models.Product(**api_product)
     if db_product.made_in_india == 1 and len(db_product.state) <= 0:
         return "state_error"
     if db_product.made_in_india == 0 and len(db_product.state) > 0:
@@ -204,7 +188,7 @@ def add_product(db: Session, product: schemas.ProductCreate):
     db.flush()
     db.commit()
     db.refresh(db_product)
-    print(db_product)
+
     return db_product.__dict__
 
 
@@ -223,7 +207,7 @@ def update_product(db: Session, product_id: int, product: schemas.ProductUpdate)
     filtered_payload = {
         key: value for key, value in dict(product).items() if value != None
     }
-    print(filtered_payload)
+
     val = (
         db.query(models.Product)
         .filter(models.Product.product_id == product_id)

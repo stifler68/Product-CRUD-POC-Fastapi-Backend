@@ -22,6 +22,24 @@ class User(BaseModel):
         orm_mode = True
 
 
+class Show_User(BaseModel):  # show all field to the user except password.
+    id: int
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone_number: str
+    alternate_number: str
+    dob: str
+    gender: str
+    address: str
+    state: str
+
+    nationality: int
+
+    class Config:
+        orm_mode = True
+
+
 class UserCreate(BaseModel):
     first_name: str
     last_name: str
@@ -99,7 +117,6 @@ class ProductCreate(BaseModel):
     description: str
     made_in_india: int
     state: str
-    added_by: int
 
     class Config:
         orm_mode = True

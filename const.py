@@ -13,3 +13,5 @@ PLEASE_CHECK_MADE_IN_INDIA_AND_STATE_FIELD: str = (
 )
 PRODUCT_ADDED_SUCCESSFULLY: str = "Product Added Successfully"
 PRODUCT_NOT_FOUND: str = "Product not found"
+PRODUCT_DELETED_SUCCESSFULLY: str = "Product deleted Successfully"
+PRODUCT_UPDATE_SUCCESSFULLY: str = "Product update Successfully"

@@ -15,7 +15,7 @@ from fastapi.security import (
 )
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from jwt import InvalidTokenError, ExpiredSignatureError
+
 
 #
 import os

@@ -1,7 +1,7 @@
 ecdsa
 email-validator
 exceptiongroup
-fastapi
+fastapi[all]
 h11
 httpcore
 httpx
@@ -27,3 +27,4 @@ watchfiles
 websockets
 wincertstore
 zstandard
+sqlalchemy

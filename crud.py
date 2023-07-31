@@ -205,11 +205,10 @@ def add_product(db: Session, product: schemas.ProductCreate, added_by: int):
 
 
 def delete_product(db: Session, product_id: int):
-   
     product_found = (
         db.query(models.Product).filter(models.Product.product_id == product_id).first()
     )
- 
+
     if not product_found:
         return product_found
     db.delete(product_found)

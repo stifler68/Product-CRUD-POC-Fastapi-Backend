@@ -229,3 +229,6 @@ def update_product(db: Session, product_id: int, product: schemas.ProductUpdate)
     )
     db.commit()
     return val
+
+
+# hello

@@ -1,3 +1,4 @@
+from typing import Union
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
@@ -131,6 +132,19 @@ class ProductUpdate(BaseModel):
     description: Optional[str]
     made_in_india: Optional[int]
     state: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+
+# ------------------- ApiResponse ----------------
+
+
+class ApiResponse(BaseModel):
+    message: Optional[str]
+    data: Union[list, dict] = []
+    status_code: int = 200
+    success: bool = True
 
     class Config:
         orm_mode = True

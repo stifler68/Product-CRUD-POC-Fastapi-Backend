@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import crud, models, schemas
 from database import SessionLocal, engine
 
+from response_parser import generate_response
 from const import (
     INVALID_USERNAME_OR_PASSWORD,
     LOGIN_SUCCESSFUL,
@@ -185,19 +186,22 @@ def delete_user(
 @app.post("/login")
 def login(user: schemas.Login, db: Session = Depends(get_db)):
     try:
-        db_user = crud.user_login(db=db, user=user)
+        return crud.user_login(db=db, user=user)
         # message = {"Message": LOGIN_SUCCESSFUL}
-        if db_user is None:
-            raise HTTPException(status_code=401, detail=INVALID_USERNAME_OR_PASSWORD)
-        access_token = crud.create_access_token(data={"sub": db_user.email})
+        # if db_user is None:
+        #     raise HTTPException(status_code=401, detail=INVALID_USERNAME_OR_PASSWORD)
+        # access_token = crud.create_access_token(data={"sub": db_user.email})
 
-        return {
-            "Message": LOGIN_SUCCESSFUL,
-            "access_token": access_token,
-            "token_type": "bearer",
-        }
-    except:
-        return {"message": "Unknown Error Occurred"}
+        # return {
+        #     "Message": LOGIN_SUCCESSFUL,
+        #     "access_token": access_token,
+        #     "token_type": "bearer",
+        # }
+
+    except Exception as err:
+        if hasattr(err, "status_code"):
+            raise err
+        raise generate_response(message=f"Some error occurred", success=False, code=500)
 
 
 # @app.post("/user-me")
@@ -303,7 +307,7 @@ def update_product(
         return {"message": "Unknown Error Occurred"}
 
 
-@app.delete("/product/{product_id}", response_model=schemas.Product)
+@app.delete("/product/{product_id}")
 def delete_product(
     product_id: int,
     db: Session = Depends(get_db),
@@ -313,6 +317,7 @@ def delete_product(
         db_product = crud.delete_product(db=db, product_id=product_id)
         if db_product is None:
             raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
+        print("---------------")
         to_return = {
             "message": PRODUCT_DELETED_SUCCESSFULLY,
             "code": 400,
@@ -320,4 +325,4 @@ def delete_product(
         }
         return to_return
     except:
-        return {"message": "Unknown Error Occurred"}
+        return {"message": "Product Not Found"}

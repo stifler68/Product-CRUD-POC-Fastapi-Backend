@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal
 import models, schemas
+from response_parser import generate_response
 
 from passlib.context import CryptContext
 
@@ -16,6 +17,7 @@ from fastapi.security import (
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from jwt import InvalidTokenError, ExpiredSignatureError
+import crud, models, schemas
 
 #
 import os
@@ -114,12 +116,22 @@ def delete_user(db: Session, user_id: int):
 
 def user_login(db: Session, user: schemas.Login):
     user_found = db.query(models.User).filter(models.User.email == user.email).first()
-    if not user_found:
-        return None
+
+    if user_found is None:
+        raise generate_response(
+            message="User does not exists.", success=False, code=404
+        )
 
     if not pwd_context.verify(user.password, user_found.password):
-        return None
-    return user_found
+        # print(user_found.__dict__)
+        raise generate_response(message="Invalid credentials.", success=False, code=400)
+
+    access_token = crud.create_access_token(data={"sub": user_found.email})
+    return generate_response(
+        message="Login success. ",
+        success=True,
+        data={"name": user_found.email, "access_token": access_token},
+    )
 
 
 # Configure JWT setting
@@ -193,13 +205,16 @@ def add_product(db: Session, product: schemas.ProductCreate, added_by: int):
 
 
 def delete_product(db: Session, product_id: int):
+   
     product_found = (
         db.query(models.Product).filter(models.Product.product_id == product_id).first()
     )
+ 
     if not product_found:
         return product_found
     db.delete(product_found)
     db.commit()
+
     return product_found
 
 
